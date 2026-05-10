@@ -22,7 +22,7 @@ Is the user setting up a brand new project?
 
 ### `aforge init`
 
-Interactive wizard asks 7 questions:
+Interactive wizard asks questions about:
 
 1. **Project name** — Your game's name (e.g. "Dungeon Quest")
 2. **Art style** — Choose from:
@@ -36,6 +36,8 @@ Interactive wizard asks 7 questions:
 5. **Game genre** — Genre tag (optional): "RPG", "Platformer", "Roguelike", "Metroidvania", "Action", "Strategy", etc.
 6. **Default view** — Camera angle used when `--view` not specified: `front`, `top-down`, `side-scroller`
 7. **Default size** — Output resolution in `WxH` format: `32x32`, `64x64`, `128x128`, etc.
+
+**Important:** `aforge init` creates ONLY `assetforge.config.json`. It does NOT create `.env`, `.gitignore`, or `assets/` directories.
 
 ### `aforge sprite init`
 
@@ -63,17 +65,19 @@ Step 2: Run: aforge init --from-json @filename.json
 
 #### PowerShell (Windows)
 ```powershell
-Set-Content -Path .aforge-init.json -Value '{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"openai/gpt-5-image-mini"}'
+Set-Content -Path .aforge-init.json -Value '{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"google/gemini-3.1-flash-image-preview"}'
 aforge init --from-json @.aforge-init.json
 ```
 
 #### Bash (Linux / macOS)
 ```bash
 cat > .aforge-init.json << 'EOF'
-{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"openai/gpt-5-image-mini"}
+{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"google/gemini-3.1-flash-image-preview"}
 EOF
 aforge init --from-json @.aforge-init.json
 ```
+
+**`aforge init --from-json` creates ONLY `assetforge.config.json`.** No other files or folders are created. You must set up `.env` and `.gitignore` separately.
 
 **Required fields:** `project.name`, `style.visual`, `style.base_prompt`, `view`, `size`
 
@@ -127,11 +131,13 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 | `openrouter` | Uses OpenRouter API (recommended, multi-model BYOK) |
 | `mock` | Test provider — returns fixed test images |
 
-### Common Models
+### Models (OpenRouter)
 
 | Model | Notes |
 |-------|-------|
-| `openai/gpt-5-image-mini` | Fast, OpenRouter routed (recommended) |
+| `google/gemini-3.1-flash-image-preview` | Fast image generation, recommended |
+| `google/gemini-3-pro-image-preview` | Highest quality image generation |
+| `openai/gpt-5-image-mini` | Alternative, OpenRouter routed |
 
 ## Agent Workflow
 
@@ -139,14 +145,22 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 
 ```
 1. Ask user about their game (genre, art style, resolution)
-2. Build config JSON
-3. Write JSON to .aforge-init.json
-4. Run: aforge init --from-json @.aforge-init.json
-5. Ask about sprite conventions (outlines, silhouette, etc.)
-6. Write JSON to .aforge-sprite-init.json
-7. Run: aforge sprite init --from-json @.aforge-sprite-init.json
-8. Confirm: assetforge.config.json and assets/sprites/sprites.json created
-9. Ready: user can now run aforge sprite <name> "description"
+2. Ask which image provider (openrouter recommended)
+   → OpenRouter supports: Google Gemini (recommended) + OpenAI
+3. Ask which model (google/gemini-3.1-flash-image-preview recommended)
+4. ASK FOR OPENROUTER_API_KEY — REQUIRED step
+   → Create .env with: OPENROUTER_API_KEY=sk-or-...
+   → Add .env to .gitignore if not present
+5. Build config JSON (with provider + model from steps 2-3)
+6. Write JSON to .aforge-init.json
+7. Run: aforge init --from-json @.aforge-init.json
+   → This creates ONLY assetforge.config.json
+8. Confirm: assetforge.config.json created
+9. Ask about sprite conventions (outlines, silhouette, etc.)
+10. Write JSON to .aforge-sprite-init.json
+11. Run: aforge sprite init --from-json @.aforge-sprite-init.json
+12. Confirm: assets/sprites/sprites.json created
+13. Ready: user can now run aforge sprite <name> "description"
 ```
 
 ### Quick setup (defaults)
@@ -154,6 +168,11 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 When user says "set up aforge with defaults" or "just use pixel art":
 
 ```powershell
+# Step 1: Create .env with API key (ask user!)
+Set-Content -Path .env -Value "OPENROUTER_API_KEY=sk-or-..."
+Add-Content -Path .gitignore -Value "`n.env`n.aforge-debug/`n"
+
+# Step 2: Create config
 Set-Content -Path .aforge-init.json -Value '{"project":{"name":"my-game"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game sprite, black pixel outline"},"view":"front","size":"32x32"}'
 aforge init --from-json @.aforge-init.json
 ```
@@ -163,7 +182,8 @@ aforge init --from-json @.aforge-init.json
 - **Config already exists**: Tell user. Use `--from-json` to overwrite only if explicitly requested (delete config first, then re-run init).
 - **User wants custom resolution**: Ask for WxH. Common sizes: 16x16, 32x32, 64x64, 128x128.
 - **User unsure about style**: Default to `pixel-art-retro` — it's the most common for game sprites.
-- **No API key yet**: Config can still be created. User needs to set `OPENROUTER_API_KEY` in `.env` before any generation.
+- **User unsure about model**: Recommend `google/gemini-3.1-flash-image-preview` for fast results, `google/gemini-3-pro-image-preview` for highest quality.
+- **No API key yet**: Config can still be created. User MUST set `OPENROUTER_API_KEY` in `.env` before any generation. Agent should create `.env` with the key.
 
 ## Provider Configuration
 
@@ -171,6 +191,6 @@ After init, the user can change provider/model later:
 
 ```
 aforge config --provider openrouter
-aforge config --model openai/gpt-5-image-mini
+aforge config --model google/gemini-3.1-flash-image-preview
 aforge config                                      # Show current settings
 ```
