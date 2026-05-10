@@ -23,6 +23,11 @@ aforge sprite init                  # Set up sprite conventions (wizard or --fro
 aforge sprite <name> [description]  # Generate a sprite
 aforge config                       # Manage provider/model settings
 aforge config --list                # List available providers and models
+aforge pixelize <image> --size WxH  # Convert image to pixel art (local, no API)
+aforge palette extract <image>      # Extract color palette from image (local)
+aforge export                       # Export assets to folder (excludes raw/history)
+aforge export --zip                 # Export assets as ZIP archive
+aforge doctor                       # Check environment health (config, API, deps)
 aforge --version                    # Show version
 ```
 
@@ -73,7 +78,7 @@ The core command. Generates sprite images from a description.
 
 | Flag | Purpose |
 |------|---------|
-| `--view <view>` | Camera: `front`, `top-down`, `side-scroller` |
+| `--view <view>` | Camera: `front`, `top-down`, `side-scroller`, `isometric` |
 | `--variant <slug>` | Named variation of same character |
 | `--based-on <name>` | New character based on existing one's visuals |
 | `--reference <path>` | Explicit reference image path |
@@ -97,33 +102,48 @@ Run without flags for interactive wizard. Run `aforge config --list` to see all 
 
 ## Workflows
 
-### Recommended Flow — Front First
+### MANDATORY Flow — Front First (Design Checkpoint)
 
-**Always generate `front` view first**, even if the user ultimately wants isometric or side-scroller. The front view is the canonical reference — it anchors the character design for all other views and gives the user a checkpoint to review before committing to multiple API calls.
+**⚠️ RULE: The agent MUST ALWAYS generate the front view first, show it to the user, and WAIT for explicit approval before generating any other views (side-scroller, top-down, isometric, etc.). This is NOT optional.**
+
+**The agent MUST NOT generate multiple views in one go. Each view requires user confirmation.**
+
+#### Flow (strictly enforced):
 
 ```
-Step 1: Generate front view
-aforge sprite knight "heavy plate armor, silver sword, blue cape"
+Step 1: ALWAYS generate front view first — regardless of what view the user requested
+aforge sprite knight "heavy plate armor, silver sword, blue cape" --view front
 → Generates knight_front.png
-→ Show the result to the user and ask: "Happy with the design? Any changes?"
+→ Show the result to the user
+→ ASK: "Here's the front view. Are you happy with the design? Would you like any changes before I generate other views?"
 
-Step 2: If not satisfied — regenerate front
-aforge sprite knight --force
-→ Regenerates using same description. Repeat until approved.
+Step 2: WAIT for user response
+├── User wants changes → apply edits (--edit or --force) and show again
+│   → Loop until user approves
+├── User approves → proceed to Step 3
+└── User says "skip other views" → STOP, done
 
-Step 3: Once user approves — generate additional views
+Step 3: ASK which additional views they want
+→ "Which other views would you like me to generate? Options: side-scroller, top-down, isometric"
+→ WAIT for user response
+→ Generate ONLY the views the user explicitly requests
+
+Step 4: Generate each additional view ONE AT A TIME, showing each result
 aforge sprite knight --view side-scroller
-aforge sprite knight --view top-down
-→ Each view uses knight_front.png as reference automatically → better consistency
+→ Show result, ask: "Happy with this view?"
+→ Wait for confirmation before next view
 ```
 
-**Why front first:**
-- Gives the user a design checkpoint before multiple API calls
-- All subsequent views use front as visual reference — more consistent results
-- Faster to iterate on one image than fix inconsistencies across multiple views
+#### Why this is mandatory:
+- **Cost control** — prevents wasting API calls on a design the user doesn't like
+- **Consistency** — all subsequent views use the approved front as reference
+- **User control** — the user decides what gets generated, not the agent
 
-**Exception:** If the user explicitly requests a specific view, respect that.
-Front-first is a strong recommendation, not a hard rule.
+#### What the agent must NEVER do:
+- ❌ Generate front + side-scroller + top-down in one batch without asking
+- ❌ Generate isometric views without showing front first
+- ❌ Skip the approval step ("I'll generate all views now")
+- ❌ Assume the user wants all views listed in a spec without confirming
 
 ---
 
@@ -185,6 +205,81 @@ aforge sprite --from-spec sprites.spec.json
 ```
 
 See `sprite-spec` skill for the spec format.
+
+### Pixelize (Local, No API)
+
+Convert any image to pixel art using nearest-neighbor downsampling:
+
+```
+aforge pixelize concept.png --size 32x32
+aforge pixelize sprite.png --size 16x16 --upscale 4    # 16x16 pixels → 64x64 display
+aforge pixelize photo.jpg --size 64x64 --output out.png
+```
+
+Supported formats: `.png`, `.jpg`, `.jpeg`, `.webp`
+
+### Palette Extract (Local, No API)
+
+Extract dominant colors from a reference image and update config:
+
+```
+aforge palette extract reference.png                    # Extract 8 colors (default)
+aforge palette extract reference.png --num-colors 16   # Extract 16 colors
+aforge palette extract ref.png --output-palette pal.json  # Also save as JSON
+```
+
+Updates `color_palette_description` in `assetforge.config.json` automatically.
+
+### Doctor (Health Check)
+
+```
+aforge doctor
+```
+
+Checks: config exists, API key present, provider reachable, sharp installed, output directory valid.
+
+### Export (Local, No API)
+
+Export all game-ready assets to a folder or ZIP, preserving the sprite folder structure. Excludes raw provider output, JSON descriptors, and history files.
+
+```
+aforge export                              # Export to ./export/ folder
+aforge export --output dist/sprites        # Export to custom folder
+aforge export --zip                        # Export as ./export.zip
+aforge export --zip --output game.zip      # Export as custom ZIP path
+```
+
+**Flags:**
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--output <path>` | `./export` | Output directory or ZIP file path |
+| `--zip` | false | Create ZIP archive instead of folder |
+
+**What gets exported:**
+- All sprite PNGs (front, side, top-down, isometric)
+- All variant PNGs
+- Portraits (if generated)
+
+**What is excluded:**
+- `*_raw.png` — raw provider output before post-processing
+- `*.json` — descriptor files (internal metadata)
+- `history/` — old versions from edits/regenerations
+
+**Output structure** (mirrors assets/ without excluded files):
+```
+export/
+└── sprites/
+    ├── knight/
+    │   ├── knight_front.png
+    │   ├── knight_side-right.png
+    │   ├── knight_side-left.png
+    │   └── variants/
+    │       └── golden/
+    │           └── knight_golden_front.png
+    └── goblin/
+        └── goblin_front.png
+```
 
 ## Troubleshooting
 

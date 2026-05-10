@@ -118,10 +118,27 @@ Users will give you brief, simple descriptions. Your job is to enrich them into 
    - Size overrides (if different from project default)
    - Based-on (if this sprite should visually match an existing one)
 3. Write the spec JSON to `sprites.spec.json` in the project root.
-4. Run: `aforge sprite --from-spec sprites.spec.json`
+4. **DO NOT run `--from-spec` directly.** Instead, generate each sprite following the mandatory front-first checkpoint flow:
+   - `aforge sprite <name> "<description>" --view front`
+   - Show result → ask for approval → then generate remaining views one by one
 
 ### Processing behavior
 
+**⚠️ MANDATORY: Front-First Design Checkpoint (even in batch mode)**
+
+When processing a spec file, the agent MUST NOT blindly generate all views. The flow is:
+
+1. For EACH sprite in the spec, generate ONLY the `front` view first.
+2. Show the front result to the user and ASK: "Happy with this design? Any changes before generating other views?"
+3. WAIT for user approval before generating additional views for that sprite.
+4. Only after the user approves the front, generate the remaining views listed in the spec (one at a time, showing each result).
+5. Then move to the next sprite and repeat.
+
+**The agent MUST NOT run `aforge sprite --from-spec` directly** if the spec contains multiple views. Instead, generate sprites one by one following the checkpoint flow above.
+
+**Exception:** If the user explicitly says "generate everything without asking" or "batch all, no checkpoints", the agent may use `--from-spec` directly.
+
+Additional rules:
 - Only sprites with `status: "pending"` are generated.
 - Already-generated sprites (`status: "generated"`) are skipped.
 - Failed sprites keep `status: "failed"` for the agent to review.

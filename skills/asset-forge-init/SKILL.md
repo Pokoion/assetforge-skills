@@ -65,23 +65,69 @@ Step 2: Run: aforge init --from-json @filename.json
 
 #### PowerShell (Windows)
 ```powershell
-Set-Content -Path .aforge-init.json -Value '{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"google/gemini-3.1-flash-image-preview"}'
+@'
+{
+  "project": { "name": "my-game" },
+  "game": { "context": "A dark fantasy RPG", "genre": "RPG" },
+  "style": {
+    "visual": "pixel-art-retro",
+    "base_prompt": "pixel art, game character sprite, black pixel outline",
+    "color_palette_description": "warm earthy tones with gold accents",
+    "color_palette_reference": null,
+    "lighting": "top-down dramatic lighting",
+    "detail_level": "high detail, 16-bit era"
+  },
+  "view": "front",
+  "size": "32x32",
+  "provider": "openrouter",
+  "model": "google/gemini-3.1-flash-image-preview"
+}
+'@ | Set-Content -Path .aforge-init.json
 aforge init --from-json @.aforge-init.json
 ```
 
 #### Bash (Linux / macOS)
 ```bash
 cat > .aforge-init.json << 'EOF'
-{"project":{"name":"my-game"},"game":{"context":"A dark fantasy RPG","genre":"RPG"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game character sprite, black pixel outline","color_palette_description":"warm earthy tones with gold accents","lighting":"top-down dramatic lighting","detail_level":"high detail, 16-bit era"},"view":"front","size":"32x32","provider":"openrouter","model":"google/gemini-3.1-flash-image-preview"}
+{
+  "project": { "name": "my-game" },
+  "game": { "context": "A dark fantasy RPG", "genre": "RPG" },
+  "style": {
+    "visual": "pixel-art-retro",
+    "base_prompt": "pixel art, game character sprite, black pixel outline",
+    "color_palette_description": "warm earthy tones with gold accents",
+    "color_palette_reference": null,
+    "lighting": "top-down dramatic lighting",
+    "detail_level": "high detail, 16-bit era"
+  },
+  "view": "front",
+  "size": "32x32",
+  "provider": "openrouter",
+  "model": "google/gemini-3.1-flash-image-preview"
+}
 EOF
 aforge init --from-json @.aforge-init.json
 ```
 
 **`aforge init --from-json` creates ONLY `assetforge.config.json`.** No other files or folders are created. You must set up `.env` and `.gitignore` separately.
 
-**Required fields:** `project.name`, `style.visual`, `style.base_prompt`, `view`, `size`
+**Complete field reference** — include ALL fields in the JSON:
 
-**Defaulted fields (can omit):** `game`, `provider`, `model`, `style.color_palette_description`, `style.color_palette_reference`, `style.lighting`, `style.detail_level`
+| Field | Required | Type | Default | Notes |
+|-------|----------|------|---------|-------|
+| `project.name` | YES | string | — | Game project name |
+| `game.context` | no | string | `""` | Narrative game world description |
+| `game.genre` | no | string | `""` | Genre tag (RPG, Platformer, etc.) |
+| `style.visual` | YES | enum | — | `pixel-art-retro`, `pixel-art-modern`, `flat-vector`, `painterly`, `other` |
+| `style.base_prompt` | YES | string | — | Core art direction for image models |
+| `style.color_palette_description` | no | string | `""` | Palette description in words |
+| `style.color_palette_reference` | no | string\|null | `null` | Path to reference palette image |
+| `style.lighting` | no | string | `""` | Lighting direction / style |
+| `style.detail_level` | no | string | `""` | Detail level description |
+| `view` | YES | enum | — | `front`, `top-down`, `side-scroller`, `isometric` |
+| `size` | YES | string | — | Output resolution: `WxH` (e.g. `32x32`) |
+| `provider` | no | enum | `"openrouter"` | `openrouter` or `mock` |
+| `model` | no | enum | `"google/gemini-3.1-flash-image-preview"` | Model slug (see Models table below) |
 
 ### `aforge sprite init --from-json`
 
@@ -135,8 +181,8 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 
 | Model | Notes |
 |-------|-------|
-| `google/gemini-3.1-flash-image-preview` | Fast image generation, recommended |
-| `google/gemini-3-pro-image-preview` | Highest quality image generation |
+| `google/gemini-3.1-flash-image-preview` | Fast image generation, recommended default |
+| `google/gemini-3-pro-image-preview` | Highest quality, slower |
 | `openai/gpt-5-image-mini` | Alternative, OpenRouter routed |
 
 ## Agent Workflow
@@ -172,8 +218,25 @@ When user says "set up aforge with defaults" or "just use pixel art":
 Set-Content -Path .env -Value "OPENROUTER_API_KEY=sk-or-..."
 Add-Content -Path .gitignore -Value "`n.env`n.aforge-debug/`n"
 
-# Step 2: Create config
-Set-Content -Path .aforge-init.json -Value '{"project":{"name":"my-game"},"style":{"visual":"pixel-art-retro","base_prompt":"pixel art, game sprite, black pixel outline"},"view":"front","size":"32x32"}'
+# Step 2: Create config with ALL required fields
+@'
+{
+  "project": { "name": "my-game" },
+  "game": { "context": "", "genre": "" },
+  "style": {
+    "visual": "pixel-art-retro",
+    "base_prompt": "pixel art, game sprite, black pixel outline",
+    "color_palette_description": "",
+    "color_palette_reference": null,
+    "lighting": "",
+    "detail_level": ""
+  },
+  "view": "front",
+  "size": "32x32",
+  "provider": "openrouter",
+  "model": "google/gemini-3.1-flash-image-preview"
+}
+'@ | Set-Content -Path .aforge-init.json
 aforge init --from-json @.aforge-init.json
 ```
 
@@ -189,8 +252,9 @@ aforge init --from-json @.aforge-init.json
 
 After init, the user can change provider/model later:
 
-```
+```bash
 aforge config --provider openrouter
-aforge config --model google/gemini-3.1-flash-image-preview
+aforge config --model openai/gpt-5-image-mini
+aforge config --list                               # Show all available models
 aforge config                                      # Show current settings
 ```
