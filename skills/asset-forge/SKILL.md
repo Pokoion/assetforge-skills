@@ -13,7 +13,7 @@ AssetForge (`aforge`) is a CLI tool for generating game sprites via AI image pro
 - Node.js >= 18
 - `aforge` installed globally (`npm install -g @pokoion/assetforge`)
 - OpenRouter API key as `OPENROUTER_API_KEY` in `.env` (must be created manually or by agent)
-- `.env` must be in `.gitignore`
+- `.env`, `.aforge-debug/`, and `.aforge-*.json` must be in `.gitignore`
 
 ## CLI Overview
 
@@ -306,7 +306,7 @@ Create a `.env` file in your project root. The agent MUST do this during setup â
 OPENROUTER_API_KEY=sk-or-...
 ```
 
-Also add `.env` and `.aforge-debug/` to `.gitignore`.
+Also add `.env`, `.aforge-debug/`, and `.aforge-*.json` to `.gitignore`. The `.aforge-*.json` entry is a safety net â€” the CLI auto-deletes temp skill files after it reads them, but ignoring the pattern means any leftover (e.g. from a crashed run) is not committed by accident.
 
 ## Output Structure
 

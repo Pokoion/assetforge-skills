@@ -52,7 +52,7 @@ Define multiple sprites in a single JSON file (`sprites.spec.json`) and generate
 |-------|------|----------|---------|-------------|
 | `name` | string | **Yes** | — | Asset identifier (slug, lowercase, no spaces) |
 | `description` | string | **Yes** | — | Character description sent to image model |
-| `views` | string[] | No | `["front"]` | Views to generate: `front`, `top-down`, `side-scroller` |
+| `views` | string[] | No | `["front"]` | Views to generate: `front`, `top-down`, `side-scroller`, `isometric` |
 | `variants` | Array | No | `[]` | Named variations of this sprite |
 | `size` | string | No | (config default) | Override size: `WxH` format (e.g. `64x64`) |
 | `based_on` | string \| null | No | `null` | Name of existing sprite to base visuals on |
@@ -113,7 +113,7 @@ Users will give you brief, simple descriptions. Your job is to enrich them into 
 2. For each sprite, determine:
    - Name (slug)
    - Detailed description (visual appearance, equipment, colors)
-   - Views needed (front only? side too? top-down?)
+   - Views needed (front only? side too? top-down? isometric?)
    - Variants (color swaps, equipment changes)
    - Size overrides (if different from project default)
    - Based-on (if this sprite should visually match an existing one)
@@ -144,6 +144,7 @@ Additional rules:
 - Failed sprites keep `status: "failed"` for the agent to review.
 - The spec file is updated after each sprite completes (so progress is preserved if interrupted).
 - Side-scroller views auto-generate mirrored left copies.
+- Isometric views generate 4 directional sprites (sw/ne/nw/se) from 1 API call via dual-sprite template + split + mirror.
 
 ### After generation
 
@@ -251,6 +252,6 @@ Place `knight` first so it generates before `captain` and `squire` (which depend
 ## Constraints
 
 - Sprite names must be unique within the spec.
-- Maximum 50 sprites per spec (large batches hit rate limits).
 - `based_on` sprites must exist in the spec and appear before dependent sprites.
 - Spec file is overwritten in-place during generation (to update statuses).
+- Large batches (roughly 30+ sprites) may hit provider rate limits; consider splitting into multiple spec files if you see `429`/rate-limit errors.
