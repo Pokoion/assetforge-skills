@@ -34,7 +34,7 @@ Interactive wizard asks questions about:
 3. **Base prompt** — Core art direction text sent to image models (e.g. "pixel art, game sprite, dark fantasy")
 4. **Game context** — Narrative description of your game world (optional). Helps the AI generate thematically consistent assets.
 5. **Game genre** — Genre tag (optional): "RPG", "Platformer", "Roguelike", "Metroidvania", "Action", "Strategy", etc.
-6. **Default view** — Camera angle used when `--view` not specified: `front`, `top-down`, `side-scroller`
+6. **Default view** — Camera angle used when `--view` not specified: `front`, `top-down`, `side-scroller`, `isometric`
 7. **Default size** — Output resolution in `WxH` format: `32x32`, `64x64`, `128x128`, etc.
 
 **Important:** `aforge init` creates ONLY `assetforge.config.json`. It does NOT create `.env`, `.gitignore`, or `assets/` directories.
@@ -110,6 +110,8 @@ aforge init --from-json @.aforge-init.json
 ```
 
 **`aforge init --from-json` creates ONLY `assetforge.config.json`.** No other files or folders are created. You must set up `.env` and `.gitignore` separately.
+
+**Temp file cleanup:** the CLI auto-deletes files matching `.aforge-*.json` after it reads them successfully, so `.aforge-init.json` does NOT stick around in the user's repo. Do not re-create the same file across invocations — write it, run `aforge`, done. User-owned JSON files (anything that does NOT start with `.aforge-`) are never touched.
 
 **Complete field reference** — include ALL fields in the JSON:
 
@@ -196,15 +198,17 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 3. Ask which model (google/gemini-3.1-flash-image-preview recommended)
 4. ASK FOR OPENROUTER_API_KEY — REQUIRED step
    → Create .env with: OPENROUTER_API_KEY=sk-or-...
-   → Add .env to .gitignore if not present
+   → Add .env, .aforge-debug/, .aforge-*.json to .gitignore if not present
 5. Build config JSON (with provider + model from steps 2-3)
 6. Write JSON to .aforge-init.json
 7. Run: aforge init --from-json @.aforge-init.json
    → This creates ONLY assetforge.config.json
+   → .aforge-init.json is AUTO-DELETED by the CLI on success
 8. Confirm: assetforge.config.json created
 9. Ask about sprite conventions (outlines, silhouette, etc.)
 10. Write JSON to .aforge-sprite-init.json
 11. Run: aforge sprite init --from-json @.aforge-sprite-init.json
+    → .aforge-sprite-init.json is also AUTO-DELETED on success
 12. Confirm: assets/sprites/sprites.json created
 13. Ready: user can now run aforge sprite <name> "description"
 ```
@@ -213,10 +217,11 @@ Always `WxH` with lowercase x: `32x32`, `64x64`, `128x128`. Represents the final
 
 When user says "set up aforge with defaults" or "just use pixel art":
 
+#### PowerShell (Windows)
 ```powershell
 # Step 1: Create .env with API key (ask user!)
 Set-Content -Path .env -Value "OPENROUTER_API_KEY=sk-or-..."
-Add-Content -Path .gitignore -Value "`n.env`n.aforge-debug/`n"
+Add-Content -Path .gitignore -Value "`n.env`n.aforge-debug/`n.aforge-*.json`n"
 
 # Step 2: Create config with ALL required fields
 @'
@@ -238,6 +243,36 @@ Add-Content -Path .gitignore -Value "`n.env`n.aforge-debug/`n"
 }
 '@ | Set-Content -Path .aforge-init.json
 aforge init --from-json @.aforge-init.json
+# .aforge-init.json is auto-deleted by the CLI after a successful read.
+```
+
+#### Bash (Linux / macOS)
+```bash
+# Step 1: Create .env with API key (ask user!)
+echo "OPENROUTER_API_KEY=sk-or-..." > .env
+printf '\n.env\n.aforge-debug/\n.aforge-*.json\n' >> .gitignore
+
+# Step 2: Create config with ALL required fields
+cat > .aforge-init.json << 'EOF'
+{
+  "project": { "name": "my-game" },
+  "game": { "context": "", "genre": "" },
+  "style": {
+    "visual": "pixel-art-retro",
+    "base_prompt": "pixel art, game sprite, black pixel outline",
+    "color_palette_description": "",
+    "color_palette_reference": null,
+    "lighting": "",
+    "detail_level": ""
+  },
+  "view": "front",
+  "size": "32x32",
+  "provider": "openrouter",
+  "model": "google/gemini-3.1-flash-image-preview"
+}
+EOF
+aforge init --from-json @.aforge-init.json
+# .aforge-init.json is auto-deleted by the CLI after a successful read.
 ```
 
 ### Edge cases
